@@ -34,7 +34,20 @@ class AppointmentService
 
     public function create(CreateAppointmentDTO $dto): Appointment
     {
-        $this->clientRepository->getByIdOrFail($dto->clientId);
+        $clientId = $dto->clientId;
+        if ($clientId === null) {
+            if (empty($dto->clientName) || empty($dto->clientEmail)) {
+                throw new InvalidArgumentException('Either client_id or client_name and client_email are required.');
+            }
+            $client = $this->clientRepository->create([
+                'name' => $dto->clientName,
+                'email' => $dto->clientEmail,
+                'phone' => $dto->clientPhone,
+            ]);
+            $clientId = $client->id;
+        } else {
+            $this->clientRepository->getByIdOrFail($clientId);
+        }
 
         $services = $this->salonServiceRepository->getByIds($dto->salonServiceIds);
 
@@ -43,6 +56,7 @@ class AppointmentService
         }
 
         $appointmentData = $dto->toCollection()->all();
+        $appointmentData['client_id'] = $clientId;
         $appointment = $this->appointmentRepository->create($appointmentData);
 
         $items = [];

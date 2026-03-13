@@ -45,6 +45,16 @@ php artisan serve
 A API fica em **http://localhost:8000**.  
 Os endpoints da aplicação estão em **http://localhost:8000/api/v1/** (ex.: `GET /api/v1/salon-services`, `POST /api/v1/appointments`).
 
+**Autenticação:** a API usa **Laravel Sanctum** com Bearer token. Rotas públicas: `POST /auth/login`, `GET /salon-services`, `POST /appointments` (permite agendar sem login com nome/e-mail do cliente). As demais rotas exigem o header `Authorization: Bearer <token>`.
+
+**Contas do seed (após `php artisan db:seed`):**
+
+| Papel           | E-mail                  | Senha    | Acesso |
+|-----------------|-------------------------|----------|--------|
+| Leila (admin)   | leila@cabeleleila.com   | leila123 | Tudo   |
+| Cabelereira     | carla@cabeleleila.com   | carla123 | Só agendamentos atribuídos a ela |
+| Recepcionista   | maria@cabeleleila.com   | maria123 | Agenda e pode agendar |
+
 Deixe esse terminal aberto enquanto usa o sistema.
 
 ---

@@ -9,6 +9,7 @@ class AppointmentFilterDTO
         public readonly ?string $endDate = null,
         public readonly ?int $clientId = null,
         public readonly ?string $status = null,
+        public readonly ?int $assignedUserId = null,
     ) {
     }
 }

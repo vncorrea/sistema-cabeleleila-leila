@@ -25,7 +25,7 @@ class IndexAppointmentRequest extends FormRequest
         ];
     }
 
-    public function getFilterDTO(): AppointmentFilterDTO
+    public function getFilterDTO(?int $assignedUserId = null): AppointmentFilterDTO
     {
         $validated = $this->validated();
 
@@ -34,6 +34,7 @@ class IndexAppointmentRequest extends FormRequest
             endDate: $validated['end_date'] ?? null,
             clientId: isset($validated['client_id']) ? (int) $validated['client_id'] : null,
             status: $validated['status'] ?? null,
+            assignedUserId: $assignedUserId,
         );
     }
 }

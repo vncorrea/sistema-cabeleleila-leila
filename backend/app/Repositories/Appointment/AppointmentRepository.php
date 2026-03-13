@@ -22,7 +22,7 @@ class AppointmentRepository
 
     public function getByIdWithRelations(int $id): Appointment
     {
-        return Appointment::with(['client', 'items.salonService'])->findOrFail($id);
+        return Appointment::with(['client', 'assignedTo', 'items.salonService'])->findOrFail($id);
     }
 
     public function create(array $data): Appointment
@@ -42,7 +42,7 @@ class AppointmentRepository
      */
     public function queryByFilter(AppointmentFilterDTO $dto): Builder
     {
-        $query = Appointment::with(['client', 'items.salonService']);
+        $query = Appointment::with(['client', 'assignedTo', 'items.salonService']);
 
         if ($dto->startDate !== null) {
             $query->whereDate('starts_at', '>=', $dto->startDate);
@@ -54,6 +54,10 @@ class AppointmentRepository
 
         if ($dto->clientId !== null) {
             $query->where('client_id', $dto->clientId);
+        }
+
+        if ($dto->assignedUserId !== null) {
+            $query->where('assigned_user_id', $dto->assignedUserId);
         }
 
         if ($dto->status !== null) {

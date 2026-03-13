@@ -11,6 +11,7 @@ class Appointment extends Model
 {
     protected $fillable = [
         'client_id',
+        'assigned_user_id',
         'starts_at',
         'status',
         'notes',
@@ -27,6 +28,11 @@ class Appointment extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function assignedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
     public function items(): HasMany

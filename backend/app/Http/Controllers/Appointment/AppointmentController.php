@@ -23,7 +23,11 @@ class AppointmentController extends Controller
     public function index(IndexAppointmentRequest $request): JsonResponse
     {
         try {
-            $dto = $request->getFilterDTO();
+            $assignedUserId = null;
+            if ($request->user()?->isProfessional()) {
+                $assignedUserId = $request->user()->id;
+            }
+            $dto = $request->getFilterDTO($assignedUserId);
             $perPage = $request->integer('per_page', 15);
             $appointments = $this->appointmentService->paginateByFilter($dto, $perPage);
 
@@ -46,6 +50,32 @@ class AppointmentController extends Controller
     {
         try {
             $dto = $request->getCreateAppointmentDTO();
+            $user = $request->user();
+            if ($user && ($user->isAdmin() || $user->isReceptionist()) && $dto->assignedUserId !== null) {
+                // Staff can set assigned_user_id; keep DTO as is
+            } elseif ($user && $user->isProfessional()) {
+                $dto = new \App\DTO\Appointment\CreateAppointmentDTO(
+                    clientId: $dto->clientId,
+                    startsAt: $dto->startsAt,
+                    salonServiceIds: $dto->salonServiceIds,
+                    notes: $dto->notes,
+                    assignedUserId: $user->id,
+                    clientName: $dto->clientName,
+                    clientEmail: $dto->clientEmail,
+                    clientPhone: $dto->clientPhone,
+                );
+            } else {
+                $dto = new \App\DTO\Appointment\CreateAppointmentDTO(
+                    clientId: $dto->clientId,
+                    startsAt: $dto->startsAt,
+                    salonServiceIds: $dto->salonServiceIds,
+                    notes: $dto->notes,
+                    assignedUserId: null,
+                    clientName: $dto->clientName,
+                    clientEmail: $dto->clientEmail,
+                    clientPhone: $dto->clientPhone,
+                );
+            }
             $appointment = $this->appointmentService->create($dto);
 
             return response()->json([
@@ -63,6 +93,9 @@ class AppointmentController extends Controller
 
     public function historyWithSuggestion(Request $request): JsonResponse
     {
+        if ($request->user()?->isProfessional()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
         $request->validate([
             'client_id' => ['required', 'integer', 'exists:clients,id'],
             'start_date' => ['required', 'date'],
@@ -89,10 +122,13 @@ class AppointmentController extends Controller
         }
     }
 
-    public function show(int $appointment): JsonResponse
+    public function show(\Illuminate\Http\Request $request, int $appointment): JsonResponse
     {
         try {
             $model = $this->appointmentService->getById($appointment);
+            if ($request->user()?->isProfessional() && (int) $model->assigned_user_id !== (int) $request->user()->id) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
 
             return response()->json([
                 'message' => 'OK',
@@ -110,6 +146,10 @@ class AppointmentController extends Controller
     public function update(UpdateAppointmentRequest $request, int $appointment): JsonResponse
     {
         try {
+            $existing = $this->appointmentService->getById($appointment);
+            if ($request->user()?->isProfessional() && (int) $existing->assigned_user_id !== (int) $request->user()->id) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
             $dto = $request->getUpdateAppointmentDTO();
             $byStaff = $request->boolean('by_staff', false);
             $model = $this->appointmentService->update($appointment, $dto, $byStaff);
@@ -134,6 +174,10 @@ class AppointmentController extends Controller
     public function destroy(Request $request, int $appointment): JsonResponse
     {
         try {
+            $existing = $this->appointmentService->getById($appointment);
+            if ($request->user()?->isProfessional() && (int) $existing->assigned_user_id !== (int) $request->user()->id) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
             $byStaff = $request->boolean('by_staff', false);
             $model = $this->appointmentService->cancel($appointment, $byStaff);
 
@@ -155,6 +199,10 @@ class AppointmentController extends Controller
     public function confirm(Request $request, int $appointment): JsonResponse
     {
         try {
+            $existing = $this->appointmentService->getById($appointment);
+            if ($request->user()?->isProfessional() && (int) $existing->assigned_user_id !== (int) $request->user()->id) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
             $dto = new ConfirmAppointmentDTO(appointmentId: $appointment);
             $model = $this->appointmentService->confirm($dto);
 
@@ -174,6 +222,11 @@ class AppointmentController extends Controller
     public function updateItemStatus(UpdateAppointmentItemStatusRequest $request, int $appointmentItem): JsonResponse
     {
         try {
+            $item = \App\Models\AppointmentItem::findOrFail($appointmentItem);
+            $appointment = $this->appointmentService->getById($item->appointment_id);
+            if ($request->user()?->isProfessional() && (int) $appointment->assigned_user_id !== (int) $request->user()->id) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
             $dto = $request->getUpdateStatusDTO($appointmentItem);
             $model = $this->appointmentService->updateItemStatus($dto);
 
