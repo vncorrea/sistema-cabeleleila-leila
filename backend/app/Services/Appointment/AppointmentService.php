@@ -37,7 +37,7 @@ class AppointmentService
         $clientId = $dto->clientId;
         if ($clientId === null) {
             if (empty($dto->clientName) || empty($dto->clientEmail)) {
-                throw new InvalidArgumentException('Either client_id or client_name and client_email are required.');
+                throw new InvalidArgumentException('É necessário informar client_id ou nome e e-mail do cliente.');
             }
             $existing = $this->clientRepository->findByEmail($dto->clientEmail);
             if ($existing !== null) {
@@ -57,7 +57,7 @@ class AppointmentService
         $services = $this->salonServiceRepository->getByIds($dto->salonServiceIds);
 
         if ($services->count() !== count($dto->salonServiceIds)) {
-            throw new InvalidArgumentException('One or more salon service IDs are invalid.');
+            throw new InvalidArgumentException('Um ou mais IDs de serviço são inválidos.');
         }
 
         if ($dto->assignedUserId !== null) {
@@ -66,7 +66,7 @@ class AppointmentService
             $timeStr = $startsAtCarbon->format('H:i');
             $occupied = $this->appointmentRepository->getOccupiedTimeSlotsForProfessional($dateStr, $dto->assignedUserId);
             if (in_array($timeStr, $occupied, true)) {
-                throw new InvalidArgumentException('This time slot is already taken for the selected professional.');
+                throw new InvalidArgumentException('Este horário já está ocupado para a profissional selecionada.');
             }
         }
 
@@ -93,7 +93,7 @@ class AppointmentService
 
         if (! $byStaff && ! $this->clientCanEditAppointment($appointment->starts_at)) {
             throw new LogicException(
-                'Changes are only allowed until 2 days before the appointment. Please contact the salon by phone for last-minute changes.'
+                'Alterações são permitidas apenas até 2 dias antes do agendamento. Para mudanças de última hora, entre em contato com o salão por telefone.'
             );
         }
 
@@ -107,7 +107,7 @@ class AppointmentService
             $this->appointmentItemRepository->deleteByAppointmentId($appointment->id);
             $services = $this->salonServiceRepository->getByIds($dto->salonServiceIds);
             if ($services->count() !== count($dto->salonServiceIds)) {
-                throw new InvalidArgumentException('One or more salon service IDs are invalid.');
+                throw new InvalidArgumentException('Um ou mais IDs de serviço são inválidos.');
             }
             $items = [];
             foreach ($dto->salonServiceIds as $salonServiceId) {
@@ -163,7 +163,7 @@ class AppointmentService
 
         if (! $byStaff && ! $this->clientCanEditAppointment($appointment->starts_at)) {
             throw new LogicException(
-                'Cancellation is only allowed until 2 days before the appointment. Please contact the salon by phone.'
+                'O cancelamento é permitido apenas até 2 dias antes do agendamento. Entre em contato com o salão por telefone.'
             );
         }
 
@@ -250,7 +250,7 @@ class AppointmentService
         $appointment = $this->appointmentRepository->getByIdWithRelations($appointmentId);
         $client = $appointment->client;
         if ($client === null || strtolower($client->email) !== strtolower($email)) {
-            throw new InvalidArgumentException('Appointment not found or email does not match.');
+            throw new InvalidArgumentException('Agendamento não encontrado ou o e-mail não confere.');
         }
 
         return $this->update($appointmentId, $dto, false);

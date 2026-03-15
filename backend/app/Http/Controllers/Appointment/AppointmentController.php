@@ -11,8 +11,12 @@ use App\Http\Requests\Appointment\UpdateAppointmentItemStatusRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentRequest;
 use App\Services\Appointment\AppointmentService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
+use LogicException;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 class AppointmentController extends Controller
@@ -41,7 +45,7 @@ class AppointmentController extends Controller
                 'total' => $appointments->total(),
                 'last_page' => $appointments->lastPage(),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@index', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -84,9 +88,9 @@ class AppointmentController extends Controller
                 'message' => 'Appointment created successfully',
                 'data' => $appointment,
             ], 201);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@store', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -134,7 +138,7 @@ class AppointmentController extends Controller
                     'suggested_date' => $result['suggested_date'],
                 ],
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@historyWithSuggestion', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -153,9 +157,9 @@ class AppointmentController extends Controller
                 'message' => 'OK',
                 'data' => $model,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Appointment not found'], 404);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@show', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -177,13 +181,13 @@ class AppointmentController extends Controller
                 'message' => 'Appointment updated successfully',
                 'data' => $model,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Appointment not found'], 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\LogicException $e) {
+        } catch (LogicException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@update', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -204,11 +208,11 @@ class AppointmentController extends Controller
                 'message' => 'Appointment cancelled successfully',
                 'data' => $model,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Appointment not found'], 404);
-        } catch (\LogicException $e) {
+        } catch (LogicException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@destroy', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -229,9 +233,9 @@ class AppointmentController extends Controller
                 'message' => 'Appointment confirmed successfully',
                 'data' => $model,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Appointment not found'], 404);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@confirm', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -267,11 +271,11 @@ class AppointmentController extends Controller
                 'message' => 'Appointment rescheduled successfully',
                 'data' => $model,
             ]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 404);
-        } catch (\LogicException $e) {
+        } catch (LogicException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@clientReschedule', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -293,9 +297,9 @@ class AppointmentController extends Controller
                 'message' => 'Item status updated successfully',
                 'data' => $model,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Appointment item not found'], 404);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AppointmentController@updateItemStatus', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);

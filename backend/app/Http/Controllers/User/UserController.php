@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -105,7 +106,7 @@ class UserController extends Controller
             return response()->json([
                 'message' => 'User deleted successfully',
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('UserController@destroy', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);

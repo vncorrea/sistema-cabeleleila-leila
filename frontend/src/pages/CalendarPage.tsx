@@ -54,9 +54,9 @@ export function CalendarPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen w-full bg-background">
         <Header />
-        <main className="mx-auto max-w-2xl px-6 py-12">
+        <main className="w-full max-w-7xl mx-auto px-6 py-12">
           <Empty>
             <EmptyIcon>
               <CalendarDays className="h-10 w-10" />
@@ -72,10 +72,10 @@ export function CalendarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen w-full bg-background">
       <Header />
 
-      <main className="mx-auto max-w-5xl px-6 py-12 lg:px-8">
+      <main className="w-full max-w-7xl mx-auto px-6 py-12 lg:px-8">
         <div className="text-center mb-10">
           <h1 className="font-serif text-3xl font-bold text-foreground mb-2">
             Calendário de Agendamentos

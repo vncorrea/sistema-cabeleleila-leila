@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\StoreClientRequest;
 use App\Services\Client\ClientService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 class ClientController extends Controller
@@ -44,7 +47,7 @@ class ClientController extends Controller
                 'message' => 'OK',
                 'data' => $clients,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('ClientController@index', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -61,9 +64,9 @@ class ClientController extends Controller
                 'message' => 'Client created successfully',
                 'data' => $client,
             ], 201);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('ClientController@store', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
@@ -79,9 +82,9 @@ class ClientController extends Controller
                 'message' => 'OK',
                 'data' => $clientModel,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Client not found'], 404);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('ClientController@show', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);

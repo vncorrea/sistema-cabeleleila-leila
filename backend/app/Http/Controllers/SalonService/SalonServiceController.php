@@ -4,6 +4,7 @@ namespace App\Http\Controllers\SalonService;
 
 use App\Http\Controllers\Controller;
 use App\Services\SalonService\SalonServiceListService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 
 class SalonServiceController extends Controller
@@ -22,7 +23,7 @@ class SalonServiceController extends Controller
                 'message' => 'OK',
                 'data' => $services,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }

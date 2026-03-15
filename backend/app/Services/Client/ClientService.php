@@ -5,6 +5,7 @@ namespace App\Services\Client;
 use App\DTO\Client\CreateClientDTO;
 use App\Models\Client;
 use App\Repositories\Client\ClientRepository;
+use Illuminate\Database\Eloquent\Collection;
 use InvalidArgumentException;
 
 class ClientService
@@ -19,7 +20,7 @@ class ClientService
         $existing = $this->clientRepository->findByEmail($dto->email);
 
         if ($existing !== null) {
-            throw new InvalidArgumentException('A client with this email already exists.');
+            throw new InvalidArgumentException('Já existe um cliente com este e-mail.');
         }
 
         $data = $dto->toCollection()->filter(fn ($value) => $value !== null)->all();
@@ -38,9 +39,9 @@ class ClientService
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Collection<int, Client>
+     * @return Collection<int, Client>
      */
-    public function listAll(): \Illuminate\Database\Eloquent\Collection
+    public function listAll(): Collection
     {
         return $this->clientRepository->listAll();
     }

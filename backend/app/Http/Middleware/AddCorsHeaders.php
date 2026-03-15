@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Throwable;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -23,7 +24,7 @@ class AddCorsHeaders
 
         try {
             $response = $next($request);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('API exception', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             $response = response()->json(
                 ['message' => config('app.debug') ? $e->getMessage() : 'Internal server error'],
