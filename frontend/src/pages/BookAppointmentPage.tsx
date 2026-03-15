@@ -45,6 +45,7 @@ export function BookAppointmentPage() {
   const [existingClientId, setExistingClientId] = useState<number | null>(null)
   const [assignedUserId, setAssignedUserId] = useState<string>('')
   const [professionals, setProfessionals] = useState<{ id: number; name: string; email: string }[]>([])
+  const [occupiedSlots, setOccupiedSlots] = useState<string[]>([])
 
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -77,6 +78,18 @@ export function BookAppointmentPage() {
         .catch(() => {})
     }
   }, [isLoggedIn, emailFromContext])
+
+  const dateOnly = dateTime ? dateTime.slice(0, 10) : ''
+  useEffect(() => {
+    if (!isReceptionist || !assignedUserId || !dateOnly) {
+      setOccupiedSlots([])
+      return
+    }
+    appointmentsApi
+      .getOccupiedSlots(dateOnly, Number(assignedUserId))
+      .then(({ data }) => setOccupiedSlots(data.data.occupied_slots))
+      .catch(() => setOccupiedSlots([]))
+  }, [isReceptionist, assignedUserId, dateOnly])
 
   const toggleService = (id: number) => {
     setSelectedServices((prev) =>
@@ -354,6 +367,7 @@ export function BookAppointmentPage() {
                     value={dateTime}
                     onChange={setDateTime}
                     minDate={new Date()}
+                    occupiedSlots={isReceptionist && assignedUserId && dateOnly ? occupiedSlots : undefined}
                   />
                 </Field>
               </FieldGroup>

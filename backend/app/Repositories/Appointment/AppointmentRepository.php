@@ -4,6 +4,7 @@ namespace App\Repositories\Appointment;
 
 use App\DTO\Appointment\AppointmentFilterDTO;
 use App\Models\Appointment;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -78,6 +79,33 @@ class AppointmentRepository
     public function paginateByFilter(AppointmentFilterDTO $dto, int $perPage = 15): LengthAwarePaginator
     {
         return $this->queryByFilter($dto)->paginate($perPage);
+    }
+
+    /**
+     * Time slots (H:i in salon timezone) already occupied by the given professional on the given date.
+     * Excludes cancelled appointments.
+     *
+     * @return array<int, string>
+     */
+    public function getOccupiedTimeSlotsForProfessional(string $date, int $assignedUserId): array
+    {
+        $tz = 'America/Sao_Paulo';
+        $start = Carbon::parse($date, $tz)->startOfDay()->utc();
+        $end = Carbon::parse($date, $tz)->endOfDay()->utc();
+
+        $appointments = Appointment::query()
+            ->where('assigned_user_id', $assignedUserId)
+            ->whereBetween('starts_at', [$start, $end])
+            ->whereNotIn('status', ['cancelled'])
+            ->orderBy('starts_at')
+            ->get();
+
+        $slots = [];
+        foreach ($appointments as $apt) {
+            $slots[] = Carbon::parse($apt->starts_at)->tz($tz)->format('H:i');
+        }
+
+        return $slots;
     }
 
     /**

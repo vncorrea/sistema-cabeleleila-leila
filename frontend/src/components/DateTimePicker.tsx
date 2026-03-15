@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/style.css'
 import { format } from 'date-fns'
@@ -28,13 +28,20 @@ type DateTimePickerProps = {
   onChange: (isoLocal: string) => void
   minDate?: Date
   className?: string
+  /** When set, only these time slots are shown as available (trava de agendamento). */
+  occupiedSlots?: string[]
 }
 
-export function DateTimePicker({ value, onChange, minDate, className }: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange, minDate, className, occupiedSlots }: DateTimePickerProps) {
   const [showCalendar, setShowCalendar] = useState(false)
   const selectedDate = value ? new Date(value) : null
   const timePart = value && value.length >= 16 ? value.slice(11, 16) : '09:00'
   const dateOnly = value ? value.slice(0, 10) : null
+
+  const availableSlots =
+    occupiedSlots && occupiedSlots.length > 0
+      ? TIME_SLOTS.filter((t) => !occupiedSlots.includes(t))
+      : TIME_SLOTS
 
   const today = new Date()
   const disabledBefore = minDate ?? new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -46,7 +53,8 @@ export function DateTimePicker({ value, onChange, minDate, className }: DateTime
     setShowCalendar(false)
   }
 
-  const handleSelectTime = (time: string) => {
+  const handleSelectTime = (time: string | null) => {
+    if (!time) return
     const d = dateOnly ?? format(disabledBefore, 'yyyy-MM-dd')
     onChange(`${d}T${time}`)
   }
@@ -58,6 +66,13 @@ export function DateTimePicker({ value, onChange, minDate, className }: DateTime
     }
     setShowCalendar((v) => !v)
   }
+
+  useEffect(() => {
+    if (availableSlots.length > 0 && !availableSlots.includes(timePart)) {
+      const d = dateOnly ?? format(disabledBefore, 'yyyy-MM-dd')
+      onChange(`${d}T${availableSlots[0]}`)
+    }
+  }, [availableSlots.join(','), timePart, dateOnly])
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -83,11 +98,17 @@ export function DateTimePicker({ value, onChange, minDate, className }: DateTime
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              {TIME_SLOTS.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
+              {availableSlots.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  Nenhum horário disponível nesta data.
+                </div>
+              ) : (
+                availableSlots.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

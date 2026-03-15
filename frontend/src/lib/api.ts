@@ -115,6 +115,10 @@ export const usersApi = {
 }
 
 export const appointmentsApi = {
+  getOccupiedSlots: (date: string, assignedUserId: number) =>
+    api.get<{ data: { occupied_slots: string[] } }>('/appointments/occupied-slots', {
+      params: { date, assigned_user_id: assignedUserId },
+    }),
   list: (params?: {
     start_date?: string
     end_date?: string

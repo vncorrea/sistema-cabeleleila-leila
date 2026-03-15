@@ -27,6 +27,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::apiResource('clients', ClientController::class)->only(['index', 'store', 'show']);
 
+        Route::get('appointments/occupied-slots', [AppointmentController::class, 'occupiedSlots']);
         Route::get('appointments/history-with-suggestion', [AppointmentController::class, 'historyWithSuggestion']);
         Route::get('appointments', [AppointmentController::class, 'index']);
         Route::get('appointments/{appointment}', [AppointmentController::class, 'show']);

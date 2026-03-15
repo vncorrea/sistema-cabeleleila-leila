@@ -60,6 +60,16 @@ class AppointmentService
             throw new InvalidArgumentException('One or more salon service IDs are invalid.');
         }
 
+        if ($dto->assignedUserId !== null) {
+            $startsAtCarbon = Carbon::parse($dto->startsAt)->tz('America/Sao_Paulo');
+            $dateStr = $startsAtCarbon->format('Y-m-d');
+            $timeStr = $startsAtCarbon->format('H:i');
+            $occupied = $this->appointmentRepository->getOccupiedTimeSlotsForProfessional($dateStr, $dto->assignedUserId);
+            if (in_array($timeStr, $occupied, true)) {
+                throw new InvalidArgumentException('This time slot is already taken for the selected professional.');
+            }
+        }
+
         $appointmentData = $dto->toCollection()->all();
         $appointmentData['client_id'] = $clientId;
         $appointment = $this->appointmentRepository->create($appointmentData);
@@ -193,6 +203,14 @@ class AppointmentService
             'appointments' => $appointments,
             'suggested_date' => $suggestedDate,
         ];
+    }
+
+    /**
+     * @return array<int, string> Time slots (H:i) occupied by the professional on the given date.
+     */
+    public function getOccupiedTimeSlotsForProfessional(string $date, int $assignedUserId): array
+    {
+        return $this->appointmentRepository->getOccupiedTimeSlotsForProfessional($date, $assignedUserId);
     }
 
     public function clientCanEditAppointment(string|\DateTimeInterface $startsAt): bool

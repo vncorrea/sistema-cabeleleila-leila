@@ -93,6 +93,23 @@ class AppointmentController extends Controller
         }
     }
 
+    public function occupiedSlots(Request $request): JsonResponse
+    {
+        $request->validate([
+            'date' => ['required', 'date'],
+            'assigned_user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $date = $request->input('date');
+        $assignedUserId = (int) $request->input('assigned_user_id');
+        $slots = $this->appointmentService->getOccupiedTimeSlotsForProfessional($date, $assignedUserId);
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => ['occupied_slots' => $slots],
+        ]);
+    }
+
     public function historyWithSuggestion(Request $request): JsonResponse
     {
         if ($request->user()?->isProfessional()) {
