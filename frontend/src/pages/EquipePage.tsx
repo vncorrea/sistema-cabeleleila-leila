@@ -6,12 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { FieldGroup, Field, FieldLabel } from '@/components/ui/field'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Empty, EmptyIcon, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
-import { Calendar, Search, Users, CheckCircle } from 'lucide-react'
+import { format } from 'date-fns'
+import { Calendar, Search, Users, CheckCircle, UserCircle, CalendarClock } from 'lucide-react'
 import Swal from 'sweetalert2'
-import { appointmentsApi, getUser } from '@/lib/api'
+import { appointmentsApi, usersApi, getUser } from '@/lib/api'
 import type { Appointment } from '@/lib/api'
 import { toast } from 'sonner'
+import { DateTimePicker } from '@/components/DateTimePicker'
+import { formatSalonDate, formatSalonTime } from '@/lib/salonDate'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pending: {
@@ -32,21 +42,6 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
 }
 
-function formatDate(startsAt: string) {
-  return new Date(startsAt).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
-
-function formatTime(startsAt: string) {
-  return new Date(startsAt).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 function servicesLabel(appointment: Appointment): string {
   return appointment.items?.map((i) => i.salon_service?.name).filter(Boolean).join(', ') ?? ''
 }
@@ -54,18 +49,32 @@ function servicesLabel(appointment: Appointment): string {
 export function EquipePage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [filterAssignedUserId, setFilterAssignedUserId] = useState<string>('')
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [professionals, setProfessionals] = useState<{ id: number; name: string; email: string }[]>([])
   const [loading, setLoading] = useState(true)
+  const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [rescheduleId, setRescheduleId] = useState<number | null>(null)
+  const [rescheduleDateTime, setRescheduleDateTime] = useState('')
+  const [savingReschedule, setSavingReschedule] = useState(false)
   const user = getUser()
+
+  useEffect(() => {
+    usersApi.professionals().then((r) => setProfessionals(r.data.data)).catch(() => {})
+  }, [])
 
   const load = () => {
     setLoading(true)
-    const params =
-      startDate || endDate
-        ? { start_date: startDate || undefined, end_date: endDate || startDate || undefined }
-        : undefined
+    const params: { start_date?: string; end_date?: string; assigned_user_id?: number } = {}
+    if (startDate || endDate) {
+      params.start_date = startDate || undefined
+      params.end_date = endDate || startDate || undefined
+    }
+    if (filterAssignedUserId) {
+      params.assigned_user_id = Number(filterAssignedUserId)
+    }
     appointmentsApi
-      .list(params)
+      .list(Object.keys(params).length ? params : undefined)
       .then((res) => setAppointments(res.data.data))
       .catch(() => toast.error('Erro ao carregar agendamentos.'))
       .finally(() => setLoading(false))
@@ -84,6 +93,41 @@ export function EquipePage() {
       load()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao confirmar.')
+    }
+  }
+
+  const handleChangeAssigned = async (appointmentId: number, newAssignedUserId: number | null) => {
+    setUpdatingId(appointmentId)
+    try {
+      await appointmentsApi.update(appointmentId, {
+        assigned_user_id: newAssignedUserId ?? undefined,
+        by_staff: true,
+      })
+      toast.success('Cabelereira alterada.')
+      load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao alterar.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleReschedule = async () => {
+    if (!rescheduleId || !rescheduleDateTime) return
+    setSavingReschedule(true)
+    try {
+      await appointmentsApi.update(rescheduleId, {
+        starts_at: rescheduleDateTime,
+        by_staff: true,
+      })
+      toast.success('Agendamento reagendado.')
+      setRescheduleId(null)
+      setRescheduleDateTime('')
+      load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao reagendar.')
+    } finally {
+      setSavingReschedule(false)
     }
   }
 
@@ -127,7 +171,32 @@ export function EquipePage() {
 
         <Card className="mb-8">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel>Cabelereira</FieldLabel>
+                  <Select
+                    value={filterAssignedUserId || 'all'}
+                    onValueChange={(v) => setFilterAssignedUserId(v === 'all' || v == null ? '' : v)}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue>
+                        {!filterAssignedUserId || filterAssignedUserId === 'all'
+                          ? 'Todas'
+                          : professionals.find((p) => String(p.id) === filterAssignedUserId)?.name ?? 'Todas'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {professionals.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </FieldGroup>
               <FieldGroup>
                 <Field>
                   <FieldLabel>Data início</FieldLabel>
@@ -221,12 +290,12 @@ export function EquipePage() {
                   return (
                     <div
                       key={appointment.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border gap-4"
+                      className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between p-4 rounded-lg border gap-4"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-1 flex-wrap">
                           <span className="font-medium">
-                            {formatDate(appointment.starts_at)}, {formatTime(appointment.starts_at)}
+                            {formatSalonDate(appointment.starts_at)}, {formatSalonTime(appointment.starts_at)}
                           </span>
                           <Badge className={status.className}>{status.label}</Badge>
                         </div>
@@ -234,8 +303,51 @@ export function EquipePage() {
                           {appointment.client?.name ?? `Cliente #${appointment.client_id}`} –{' '}
                           {servicesLabel(appointment)}
                         </p>
+                        <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                          <UserCircle className="h-4 w-4 shrink-0" />
+                          <Select
+                            value={appointment.assigned_user_id ? String(appointment.assigned_user_id) : 'none'}
+                            onValueChange={(v) =>
+                              handleChangeAssigned(
+                                appointment.id,
+                                v === 'none' ? null : Number(v)
+                              )
+                            }
+                            disabled={updatingId === appointment.id}
+                          >
+                            <SelectTrigger className="h-8 w-auto max-w-[180px] text-xs">
+                              <SelectValue>
+                                {appointment.assigned_to?.name ?? 'Sem cabelereira'}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Sem cabelereira</SelectItem>
+                              {professionals.map((p) => (
+                                <SelectItem key={p.id} value={String(p.id)}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        {appointment.status !== 'cancelled' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              setRescheduleId(appointment.id)
+                              const d = new Date(appointment.starts_at)
+                              setRescheduleDateTime(format(d, "yyyy-MM-dd'T'HH:mm"))
+                            }}
+                            disabled={rescheduleId !== null && rescheduleId !== appointment.id}
+                          >
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            Reagendar
+                          </Button>
+                        )}
                         {appointment.status === 'pending' && (
                           <Button size="sm" onClick={() => handleConfirm(appointment.id)}>
                             Confirmar
@@ -252,6 +364,35 @@ export function EquipePage() {
                           </Button>
                         )}
                       </div>
+                      {rescheduleId === appointment.id && (
+                        <div className="w-full sm:basis-full mt-4 pt-4 border-t border-border space-y-4">
+                          <p className="text-sm font-medium">Nova data e horário:</p>
+                          <DateTimePicker
+                            value={rescheduleDateTime}
+                            onChange={setRescheduleDateTime}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={handleReschedule}
+                              disabled={!rescheduleDateTime || savingReschedule}
+                            >
+                              {savingReschedule ? 'Salvando...' : 'Confirmar reagendamento'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setRescheduleId(null)
+                                setRescheduleDateTime('')
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}

@@ -11,16 +11,13 @@ import type { Appointment } from '@/lib/api'
 import { toast } from 'sonner'
 import { getToken } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { formatSalonTime } from '@/lib/salonDate'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pending: { label: 'Pendente', className: 'bg-[#FEF9E7] text-[#8A7B00]' },
   confirmed: { label: 'Confirmado', className: 'bg-[#E6F7E6] text-[#2B822B]' },
   completed: { label: 'Concluído', className: 'bg-[#E0F2FF] text-[#007BFF]' },
   cancelled: { label: 'Cancelado', className: 'bg-[#FFECEB] text-[#c41e1e]' },
-}
-
-function formatTime(startsAt: string) {
-  return new Date(startsAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 function servicesLabel(appointment: Appointment): string {
@@ -101,8 +98,9 @@ export function CalendarPage() {
                 className={cn(
                   'w-full border-0 bg-transparent [&_.react-calendar__tile]:rounded-md',
                   '[&_.react-calendar__tile]:p-2 [&_.react-calendar__month-view__days__day]:text-sm',
-                  '[&_.react-calendar__tile--now]:bg-primary/10 [&_.react-calendar__tile--now]:font-semibold',
-                  '[&_.react-calendar__tile:enabled:hover]:bg-secondary [&_.react-calendar__tile--active]:bg-primary [&_.react-calendar__tile--active]:text-primary-foreground',
+                  '[&_.react-calendar__tile--now]:bg-muted [&_.react-calendar__tile--now]:font-semibold',
+                  '[&_.react-calendar__tile:enabled:hover]:bg-muted',
+                  '[&_.react-calendar__tile--active]:bg-white [&_.react-calendar__tile--active]:text-foreground [&_.react-calendar__tile--active]:border [&_.react-calendar__tile--active]:border-input',
                   '[&_.react-calendar__navigation__label]:font-semibold [&_.react-calendar__month-view__weekdays__weekday]:text-muted-foreground [&_.react-calendar__month-view__weekdays__weekday]:text-xs'
                 )}
               />
@@ -149,7 +147,7 @@ export function CalendarPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{formatTime(appointment.starts_at)}</span>
+                            <span className="font-medium">{formatSalonTime(appointment.starts_at)}</span>
                             <Badge className={status.className}>{status.label}</Badge>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">

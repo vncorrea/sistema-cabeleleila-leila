@@ -11,13 +11,24 @@ const allNavItems = [
   { name: 'Calendário', href: '/calendario' },
   { name: 'Histórico', href: '/historico' },
   { name: 'Equipe', href: '/equipe' },
+  { name: 'Usuários', href: '/usuarios' },
 ]
 
-function getNavItemsForRole(role: string | undefined) {
-  if (role === 'professional') {
-    return allNavItems.filter((item) => item.href !== '/equipe' && item.href !== '/historico')
+function getNavItemsForRole(role: string | undefined, isLoggedIn: boolean) {
+  if (!isLoggedIn) {
+    return [
+      { name: 'Início', href: '/' },
+      { name: 'Agendar', href: '/agendar' },
+      { name: 'Área do cliente', href: '/cliente' },
+    ]
   }
-  return allNavItems
+  if (role === 'professional') {
+    return allNavItems.filter((item) => item.href === '/' || item.href === '/calendario')
+  }
+  if (role === 'admin') {
+    return allNavItems
+  }
+  return allNavItems.filter((item) => item.href !== '/usuarios')
 }
 
 export function Header() {
@@ -27,7 +38,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const isLoggedIn = !!getToken()
   const user = getUser()
-  const navigation = getNavItemsForRole(user?.role)
+  const navigation = getNavItemsForRole(user?.role, isLoggedIn)
 
   const handleLogout = async () => {
     try {

@@ -13,14 +13,22 @@ class UpdateAppointmentDTO
         public readonly ?string $startsAt = null,
         public readonly ?array $salonServiceIds = null,
         public readonly ?string $notes = null,
+        public readonly ?int $assignedUserId = null,
+        public readonly bool $assignedUserIdSet = false,
     ) {
     }
 
     public function toCollection(): Collection
     {
-        return collect([
+        $data = collect([
             'starts_at' => $this->startsAt,
             'notes' => $this->notes,
         ])->filter(fn ($value) => $value !== null);
+
+        if ($this->assignedUserIdSet) {
+            $data['assigned_user_id'] = $this->assignedUserId;
+        }
+
+        return $data;
     }
 }

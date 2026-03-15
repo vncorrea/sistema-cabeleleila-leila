@@ -32,6 +32,11 @@ class ClientService
         return $this->clientRepository->getByIdOrFail($id);
     }
 
+    public function findByEmail(string $email): ?Client
+    {
+        return $this->clientRepository->findByEmail($email);
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Collection<int, Client>
      */

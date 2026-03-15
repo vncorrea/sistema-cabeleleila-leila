@@ -33,17 +33,17 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-primary items-center justify-center p-12">
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 bg-gradient-to-br from-rose-100 via-rose-50 to-pink-50">
         <div className="max-w-md text-center">
           <div className="flex justify-center mb-8">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-foreground/10 backdrop-blur">
-              <Scissors className="h-10 w-10 text-primary-foreground" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-rose-200/80 shadow-inner">
+              <Scissors className="h-10 w-10 text-rose-700" />
             </div>
           </div>
-          <h1 className="font-serif text-4xl font-bold text-primary-foreground mb-4">
+          <h1 className="font-serif text-4xl font-bold text-rose-800 mb-4">
             Cabeleleila Leila
           </h1>
-          <p className="text-primary-foreground/80 text-lg">
+          <p className="text-rose-700/90 text-lg">
             Beleza e elegância ao seu alcance. Agende seus serviços de forma prática e rápida.
           </p>
         </div>
@@ -53,8 +53,8 @@ export function LoginPage() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8 lg:hidden">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-                <Scissors className="h-6 w-6 text-primary-foreground" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-200">
+                <Scissors className="h-6 w-6 text-rose-700" />
               </div>
               <span className="font-serif text-2xl font-semibold">Cabeleleila Leila</span>
             </div>
@@ -123,11 +123,15 @@ export function LoginPage() {
                   </Link>
                 </div>
 
-                <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base bg-rose-600 hover:bg-rose-700 text-white border-0"
+                  disabled={isLoading}
+                >
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
 
-                <Link to="/" className="block w-full">
+                <Link to="/cliente" className="block w-full">
                   <Button type="button" variant="outline" className="w-full h-12 text-base mt-2">
                     Continuar sem login
                   </Button>

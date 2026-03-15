@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { Header } from '@/components/Header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -19,8 +20,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Calendar, ChevronRight, Clock } from 'lucide-react'
-import { clientsApi, salonServicesApi, appointmentsApi, getToken } from '@/lib/api'
+import { clientsApi, salonServicesApi, appointmentsApi, usersApi, getToken, getUser } from '@/lib/api'
 import type { Client, SalonService } from '@/lib/api'
+import { DateTimePicker } from '@/components/DateTimePicker'
+import { PhoneInput } from '@/components/PhoneInput'
+import { formatPhone } from '@/lib/phoneMask'
 import { toast } from 'sonner'
 
 export function BookAppointmentPage() {
@@ -38,15 +42,41 @@ export function BookAppointmentPage() {
   const [guestName, setGuestName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
+  const [existingClientId, setExistingClientId] = useState<number | null>(null)
+  const [assignedUserId, setAssignedUserId] = useState<string>('')
+  const [professionals, setProfessionals] = useState<{ id: number; name: string; email: string }[]>([])
 
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const isLoggedIn = !!getToken()
+  const user = getUser()
+  const isReceptionist = user?.role === 'receptionist' || user?.role === 'admin'
+
+  const emailFromContext = (location.state as { clientEmail?: string } | null)?.clientEmail ?? searchParams.get('email') ?? ''
 
   useEffect(() => {
     salonServicesApi.list().then((r) => setServices(r.data.data)).catch(() => toast.error('Erro ao carregar serviços.'))
     if (isLoggedIn) {
       clientsApi.list().then((r) => setClients(r.data.data)).catch(() => toast.error('Erro ao carregar clientes.'))
+      if (isReceptionist) {
+        usersApi.professionals().then((r) => setProfessionals(r.data.data)).catch(() => toast.error('Erro ao carregar cabelereiras.'))
+      }
     }
-  }, [isLoggedIn])
+  }, [isLoggedIn, isReceptionist])
+
+  useEffect(() => {
+    if (!isLoggedIn && emailFromContext.trim()) {
+      clientsApi
+        .lookup(emailFromContext.trim())
+        .then(({ data }) => {
+          setGuestName(data.data.name)
+          setGuestEmail(data.data.email)
+          setGuestPhone(data.data.phone ? formatPhone(data.data.phone.replace(/\D/g, '')) : '')
+          setExistingClientId(data.data.id)
+        })
+        .catch(() => {})
+    }
+  }, [isLoggedIn, emailFromContext])
 
   const toggleService = (id: number) => {
     setSelectedServices((prev) =>
@@ -102,35 +132,47 @@ export function BookAppointmentPage() {
         return
       }
     } else {
-      if (!guestName.trim() || !guestEmail.trim()) {
+      if (!existingClientId && (!guestName.trim() || !guestEmail.trim())) {
         toast.error('Preencha nome e e-mail.')
         return
       }
     }
     setIsLoading(true)
     try {
-      if (isLoggedIn) {
-        await appointmentsApi.create({
-          client_id: Number(selectedClient),
-          starts_at: dateTime,
-          salon_service_ids: selectedServices,
-          notes: notes.trim() || undefined,
-        })
+    if (isLoggedIn) {
+      await appointmentsApi.create({
+        client_id: Number(selectedClient),
+        starts_at: dateTime,
+        salon_service_ids: selectedServices,
+        notes: notes.trim() || undefined,
+        assigned_user_id: assignedUserId ? Number(assignedUserId) : undefined,
+      })
       } else {
-        await appointmentsApi.create({
-          client_name: guestName.trim(),
-          client_email: guestEmail.trim(),
-          client_phone: guestPhone.trim() || undefined,
-          starts_at: dateTime,
-          salon_service_ids: selectedServices,
-          notes: notes.trim() || undefined,
-        })
+        if (existingClientId) {
+          await appointmentsApi.create({
+            client_id: existingClientId,
+            starts_at: dateTime,
+            salon_service_ids: selectedServices,
+            notes: notes.trim() || undefined,
+          })
+        } else {
+          await appointmentsApi.create({
+            client_name: guestName.trim(),
+            client_email: guestEmail.trim(),
+            client_phone: guestPhone.trim() || undefined,
+            starts_at: dateTime,
+            salon_service_ids: selectedServices,
+            notes: notes.trim() || undefined,
+          })
+        }
       }
       toast.success('Agendamento realizado com sucesso.')
       setSelectedClient('')
       setSelectedServices([])
       setDateTime('')
       setNotes('')
+      setAssignedUserId('')
+      setExistingClientId(null)
       setGuestName('')
       setGuestEmail('')
       setGuestPhone('')
@@ -198,11 +240,11 @@ export function BookAppointmentPage() {
                       <FieldGroup>
                         <Field>
                           <FieldLabel htmlFor="newClientPhone">Telefone</FieldLabel>
-                          <Input
+                          <PhoneInput
                             id="newClientPhone"
-                            placeholder="(00) 00000-0000"
                             value={newPhone}
-                            onChange={(e) => setNewPhone(e.target.value)}
+                            onChange={setNewPhone}
+                            className="h-12"
                           />
                         </Field>
                       </FieldGroup>
@@ -238,6 +280,32 @@ export function BookAppointmentPage() {
                       </Select>
                     </Field>
                   </FieldGroup>
+
+                  {isReceptionist && professionals.length > 0 && (
+                    <FieldGroup>
+                      <Field>
+                        <FieldLabel>Cabelereira</FieldLabel>
+                        <Select value={assignedUserId || undefined} onValueChange={(v) => setAssignedUserId(v ?? '')}>
+                          <SelectTrigger size="lg" className="h-12 w-full">
+                            {assignedUserId ? (
+                              <span className="truncate">
+                                {professionals.find((p) => String(p.id) === assignedUserId)?.name ?? assignedUserId}
+                              </span>
+                            ) : (
+                              <SelectValue placeholder="Selecione a cabelereira" />
+                            )}
+                          </SelectTrigger>
+                          <SelectContent>
+                            {professionals.map((p) => (
+                              <SelectItem key={p.id} value={String(p.id)}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </FieldGroup>
+                  )}
                 </>
               ) : (
                 <div className="space-y-4 mb-6 p-4 bg-secondary/50 rounded-lg">
@@ -268,11 +336,11 @@ export function BookAppointmentPage() {
                   <FieldGroup>
                     <Field>
                       <FieldLabel htmlFor="guestPhone">Telefone (opcional)</FieldLabel>
-                      <Input
+                      <PhoneInput
                         id="guestPhone"
-                        placeholder="(00) 00000-0000"
                         value={guestPhone}
-                        onChange={(e) => setGuestPhone(e.target.value)}
+                        onChange={setGuestPhone}
+                        className="h-12"
                       />
                     </Field>
                   </FieldGroup>
@@ -282,41 +350,11 @@ export function BookAppointmentPage() {
               <FieldGroup className="mt-6">
                 <Field>
                   <FieldLabel>Data e hora</FieldLabel>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="date" className="sr-only">
-                        Data
-                      </label>
-                      <Input
-                        id="date"
-                        type="date"
-                        value={dateTime ? dateTime.slice(0, 10) : ''}
-                        onChange={(e) => {
-                          const d = e.target.value
-                          const t = dateTime ? dateTime.slice(11, 16) : '09:00'
-                          setDateTime(d ? (t ? `${d}T${t}` : `${d}T09:00`) : '')
-                        }}
-                        className="h-12"
-                        min={new Date().toISOString().slice(0, 10)}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="time" className="sr-only">
-                        Hora
-                      </label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={dateTime ? dateTime.slice(11, 16) : ''}
-                        onChange={(e) => {
-                          const t = e.target.value
-                          const d = dateTime ? dateTime.slice(0, 10) : new Date().toISOString().slice(0, 10)
-                          setDateTime(d && t ? `${d}T${t}` : dateTime)
-                        }}
-                        className="h-12"
-                      />
-                    </div>
-                  </div>
+                  <DateTimePicker
+                    value={dateTime}
+                    onChange={setDateTime}
+                    minDate={new Date()}
+                  />
                 </Field>
               </FieldGroup>
 

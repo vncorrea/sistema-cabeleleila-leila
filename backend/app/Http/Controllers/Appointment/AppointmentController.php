@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Appointment;
 
 use App\DTO\Appointment\ConfirmAppointmentDTO;
+use App\DTO\Appointment\UpdateAppointmentDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Appointment\IndexAppointmentRequest;
 use App\Http\Requests\Appointment\StoreAppointmentRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentItemStatusRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentRequest;
 use App\Services\Appointment\AppointmentService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -97,16 +99,16 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
         $request->validate([
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'client_id' => ['nullable', 'integer', 'exists:clients,id'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         try {
-            $clientId = (int) $request->input('client_id');
+            $clientId = $request->filled('client_id') ? (int) $request->input('client_id') : null;
             $startDate = $request->input('start_date');
             $endDate = $request->input('end_date');
-            $result = $this->appointmentService->getClientHistoryWithSuggestion($clientId, $startDate, $endDate);
+            $result = $this->appointmentService->getHistoryWithOptionalFilters($clientId, $startDate, $endDate);
 
             return response()->json([
                 'message' => 'OK',
@@ -214,6 +216,46 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Appointment not found'], 404);
         } catch (\Exception $e) {
             Log::error('AppointmentController@confirm', ['exception' => $e->getMessage()]);
+
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function listByClientEmail(Request $request): JsonResponse
+    {
+        $request->validate(['email' => ['required', 'email']]);
+        $email = $request->input('email');
+        $appointments = $this->appointmentService->getAppointmentsByClientEmail($email);
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => $appointments->values()->all(),
+        ]);
+    }
+
+    public function clientReschedule(Request $request, int $appointment): JsonResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+            'starts_at' => ['required', 'date', 'after:now'],
+        ]);
+        $email = $request->input('email');
+        $startsAt = Carbon::parse($request->input('starts_at'), config('app.timezone'))->utc()->toIso8601String();
+        $dto = new UpdateAppointmentDTO(startsAt: $startsAt, salonServiceIds: null, notes: null);
+
+        try {
+            $model = $this->appointmentService->clientReschedule($appointment, $email, $dto);
+
+            return response()->json([
+                'message' => 'Appointment rescheduled successfully',
+                'data' => $model,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
+        } catch (\LogicException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            Log::error('AppointmentController@clientReschedule', ['exception' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 400);
         }

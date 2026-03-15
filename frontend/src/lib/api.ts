@@ -67,6 +67,10 @@ export type AppointmentItem = {
   salon_service: SalonService
 }
 export type User = { id: number; name: string; email: string; role: string }
+
+export type Professional = { id: number; name: string; email: string }
+
+export type UserListItem = { id: number; name: string; email: string; role: string }
 export type Appointment = {
   id: number
   client_id: number
@@ -81,6 +85,7 @@ export type Appointment = {
 
 export const clientsApi = {
   list: () => api.get<{ data: Client[] }>('/clients'),
+  lookup: (email: string) => api.get<{ data: Client }>('/clients/lookup', { params: { email } }),
   create: (data: { name: string; email: string; phone?: string }) =>
     api.post<{ data: Client }>('/clients', data),
   get: (id: number) => api.get<{ data: Client }>(`/clients/${id}`),
@@ -97,9 +102,29 @@ export const authApi = {
   me: () => api.get<{ data: User }>('/auth/me'),
 }
 
+export const usersApi = {
+  professionals: () => api.get<{ data: Professional[] }>('/users/professionals'),
+  list: () => api.get<{ data: UserListItem[] }>('/users'),
+  create: (data: { name: string; email: string; password: string; password_confirmation: string; role: string }) =>
+    api.post<{ data: UserListItem }>('/users', data),
+  update: (
+    id: number,
+    data: { name?: string; email?: string; password?: string; password_confirmation?: string; role?: string }
+  ) => api.put<{ data: UserListItem }>(`/users/${id}`, data),
+  delete: (id: number) => api.delete(`/users/${id}`),
+}
+
 export const appointmentsApi = {
-  list: (params?: { start_date?: string; end_date?: string; client_id?: number; status?: string }) =>
-    api.get<{ data: Appointment[]; current_page: number; total: number; last_page: number }>('/appointments', { params }),
+  list: (params?: {
+    start_date?: string
+    end_date?: string
+    client_id?: number
+    assigned_user_id?: number
+    status?: string
+  }) =>
+    api.get<{ data: Appointment[]; current_page: number; total: number; last_page: number }>('/appointments', {
+      params,
+    }),
   create: (data: {
     client_id?: number
     client_name?: string
@@ -108,19 +133,37 @@ export const appointmentsApi = {
     starts_at: string
     salon_service_ids: number[]
     notes?: string
+    assigned_user_id?: number | null
   }) => api.post<{ data: Appointment }>('/appointments', data),
   get: (id: number) => api.get<{ data: Appointment }>(`/appointments/${id}`),
   update: (
     id: number,
-    data: { starts_at?: string; salon_service_ids?: number[]; notes?: string; by_staff?: boolean }
+    data: {
+      starts_at?: string
+      salon_service_ids?: number[]
+      notes?: string
+      by_staff?: boolean
+      assigned_user_id?: number | null
+    }
   ) => api.put<{ data: Appointment }>(`/appointments/${id}`, data),
   cancel: (id: number, byStaff = false) =>
     api.delete<{ data: Appointment }>(`/appointments/${id}`, { params: { by_staff: byStaff } }),
   confirm: (id: number) => api.post<{ data: Appointment }>(`/appointments/${id}/confirm`),
-  historyWithSuggestion: (clientId: number, startDate: string, endDate: string) =>
+  listByClientEmail: (email: string) =>
+    api.get<{ data: Appointment[] }>('/appointments/by-client-email', { params: { email } }),
+  clientReschedule: (appointmentId: number, email: string, starts_at: string) =>
+    api.put<{ data: Appointment }>(`/appointments/${appointmentId}/client-reschedule`, {
+      email,
+      starts_at,
+    }),
+  historyWithSuggestion: (params: {
+    client_id?: number
+    start_date?: string
+    end_date?: string
+  }) =>
     api.get<{ data: { appointments: Appointment[]; suggested_date: string | null } }>(
       '/appointments/history-with-suggestion',
-      { params: { client_id: clientId, start_date: startDate, end_date: endDate } }
+      { params }
     ),
   updateItemStatus: (itemId: number, status: string) =>
     api.put<{ data: Appointment }>(`/appointment-items/${itemId}/status`, { status }),

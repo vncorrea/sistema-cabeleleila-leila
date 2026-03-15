@@ -16,6 +16,25 @@ class ClientController extends Controller
     ) {
     }
 
+    public function lookup(Request $request): JsonResponse
+    {
+        $request->validate(['email' => ['required', 'email']]);
+        $client = $this->clientService->findByEmail($request->input('email'));
+        if ($client === null) {
+            return response()->json(['message' => 'Client not found'], 404);
+        }
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => [
+                'id' => $client->id,
+                'name' => $client->name,
+                'email' => $client->email,
+                'phone' => $client->phone,
+            ],
+        ]);
+    }
+
     public function index(): JsonResponse
     {
         try {

@@ -39,12 +39,17 @@ class AppointmentService
             if (empty($dto->clientName) || empty($dto->clientEmail)) {
                 throw new InvalidArgumentException('Either client_id or client_name and client_email are required.');
             }
-            $client = $this->clientRepository->create([
-                'name' => $dto->clientName,
-                'email' => $dto->clientEmail,
-                'phone' => $dto->clientPhone,
-            ]);
-            $clientId = $client->id;
+            $existing = $this->clientRepository->findByEmail($dto->clientEmail);
+            if ($existing !== null) {
+                $clientId = $existing->id;
+            } else {
+                $client = $this->clientRepository->create([
+                    'name' => $dto->clientName,
+                    'email' => $dto->clientEmail,
+                    'phone' => $dto->clientPhone,
+                ]);
+                $clientId = $client->id;
+            }
         } else {
             $this->clientRepository->getByIdOrFail($clientId);
         }
@@ -158,12 +163,17 @@ class AppointmentService
     }
 
     /**
-     * When the client has an appointment in the same week, suggest scheduling other services on the same date.
+     * History with optional filters. When no dates given, last 30 days. suggested_date only when client_id is set.
      *
      * @return array{appointments: Collection, suggested_date: string|null}
      */
-    public function getClientHistoryWithSuggestion(int $clientId, string $startDate, string $endDate): array
+    public function getHistoryWithOptionalFilters(?int $clientId, ?string $startDate, ?string $endDate): array
     {
+        if ($startDate === null || $endDate === null) {
+            $endDate = Carbon::today()->format('Y-m-d');
+            $startDate = Carbon::today()->subDays(30)->format('Y-m-d');
+        }
+
         $dto = new AppointmentFilterDTO(
             startDate: $startDate,
             endDate: $endDate,
@@ -172,9 +182,11 @@ class AppointmentService
         $appointments = $this->appointmentRepository->listByFilter($dto);
 
         $suggestedDate = null;
-        $firstInWeek = $this->appointmentRepository->getClientAppointmentsInWeek($clientId, $startDate)->first();
-        if ($firstInWeek !== null) {
-            $suggestedDate = $firstInWeek->starts_at->format('Y-m-d');
+        if ($clientId !== null) {
+            $firstInWeek = $this->appointmentRepository->getClientAppointmentsInWeek($clientId, $startDate)->first();
+            if ($firstInWeek !== null) {
+                $suggestedDate = $firstInWeek->starts_at->format('Y-m-d');
+            }
         }
 
         return [
@@ -189,5 +201,40 @@ class AppointmentService
         $deadline = Carbon::today()->addDays(self::MIN_DAYS_FOR_CLIENT_EDIT);
 
         return $appointmentDate->gte($deadline);
+    }
+
+    /**
+     * List appointments for a client identified by email (for client area without login).
+     *
+     * @return Collection<int, Appointment>
+     */
+    public function getAppointmentsByClientEmail(string $email): Collection
+    {
+        $client = $this->clientRepository->findByEmail($email);
+        if ($client === null) {
+            return new Collection([]);
+        }
+
+        $dto = new AppointmentFilterDTO(
+            startDate: null,
+            endDate: null,
+            clientId: $client->id
+        );
+
+        return $this->appointmentRepository->listByFilter($dto);
+    }
+
+    /**
+     * Reschedule an appointment by client (no auth). Verifies client email and 2-day rule.
+     */
+    public function clientReschedule(int $appointmentId, string $email, UpdateAppointmentDTO $dto): Appointment
+    {
+        $appointment = $this->appointmentRepository->getByIdWithRelations($appointmentId);
+        $client = $appointment->client;
+        if ($client === null || strtolower($client->email) !== strtolower($email)) {
+            throw new InvalidArgumentException('Appointment not found or email does not match.');
+        }
+
+        return $this->update($appointmentId, $dto, false);
     }
 }

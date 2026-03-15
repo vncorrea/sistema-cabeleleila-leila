@@ -19,6 +19,7 @@ import Swal from 'sweetalert2'
 import { clientsApi, appointmentsApi, getUser } from '@/lib/api'
 import type { Client, Appointment } from '@/lib/api'
 import { toast } from 'sonner'
+import { formatSalonDate, formatSalonTime } from '@/lib/salonDate'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pending: {
@@ -37,16 +38,6 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: 'Cancelado',
     className: 'bg-[#FFECEB] text-[#c41e1e] hover:bg-[#FFECEB]',
   },
-}
-
-function formatDate(startsAt: string) {
-  const d = new Date(startsAt)
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-function formatTime(startsAt: string) {
-  const d = new Date(startsAt)
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 function totalPrice(appointment: Appointment): number {
@@ -72,18 +63,18 @@ export function HistoryPage() {
     clientsApi.list().then((r) => setClients(r.data.data)).catch(() => toast.error('Erro ao carregar clientes.'))
   }, [])
 
-  const handleSearch = async () => {
-    if (!selectedClient || !startDate || !endDate) {
-      toast.error('Selecione cliente e período.')
+  const loadHistory = async () => {
+    if (startDate && endDate && startDate > endDate) {
+      toast.error('Data início não pode ser maior que data fim.')
       return
     }
     setLoading(true)
     try {
-      const { data } = await appointmentsApi.historyWithSuggestion(
-        Number(selectedClient),
-        startDate,
-        endDate
-      )
+      const { data } = await appointmentsApi.historyWithSuggestion({
+        ...(selectedClient ? { client_id: Number(selectedClient) } : {}),
+        ...(startDate ? { start_date: startDate } : {}),
+        ...(endDate ? { end_date: endDate } : {}),
+      })
       setAppointments(data.data.appointments)
       setSuggestedDate(data.data.suggested_date)
     } catch (err) {
@@ -91,6 +82,14 @@ export function HistoryPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    loadHistory()
+  }, [])
+
+  const handleSearch = () => {
+    loadHistory()
   }
 
   const handleCancel = async (id: number) => {
@@ -106,7 +105,7 @@ export function HistoryPage() {
     try {
       await appointmentsApi.cancel(id, false)
       toast.success('Agendamento cancelado.')
-      if (selectedClient && startDate && endDate) handleSearch()
+      handleSearch()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao cancelar.')
     }
@@ -133,7 +132,7 @@ export function HistoryPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Cliente</FieldLabel>
+                  <FieldLabel>Cliente (opcional)</FieldLabel>
                   <Select value={selectedClient || undefined} onValueChange={(v) => setSelectedClient(v ?? '')}>
                     <SelectTrigger size="lg" className="h-11 w-full">
                       {selectedClient ? (
@@ -156,7 +155,7 @@ export function HistoryPage() {
               </FieldGroup>
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Data início</FieldLabel>
+                  <FieldLabel>Data início (opcional)</FieldLabel>
                   <Input
                     type="date"
                     value={startDate}
@@ -167,7 +166,7 @@ export function HistoryPage() {
               </FieldGroup>
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Data fim</FieldLabel>
+                  <FieldLabel>Data fim (opcional)</FieldLabel>
                   <Input
                     type="date"
                     value={endDate}
@@ -202,7 +201,7 @@ export function HistoryPage() {
             </EmptyIcon>
             <EmptyTitle>Nenhum agendamento encontrado</EmptyTitle>
             <EmptyDescription>
-              Não encontramos agendamentos para o período selecionado.
+              Não encontramos agendamentos. Ajuste os filtros ou busque sem filtros para ver os últimos 30 dias.
             </EmptyDescription>
           </Empty>
         ) : (
@@ -221,7 +220,7 @@ export function HistoryPage() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium">
-                              {formatDate(appointment.starts_at)}, {formatTime(appointment.starts_at)}
+                              {formatSalonDate(appointment.starts_at)}, {formatSalonTime(appointment.starts_at)}
                             </span>
                           </div>
                           <Badge className={status.className}>{status.label}</Badge>

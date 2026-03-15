@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Appointment;
 
 use App\DTO\Appointment\CreateAppointmentDTO;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAppointmentRequest extends FormRequest
@@ -38,9 +39,11 @@ class StoreAppointmentRequest extends FormRequest
         $clientEmail = $validated['client_email'] ?? null;
         $clientPhone = $validated['client_phone'] ?? null;
 
+        $startsAt = Carbon::parse($validated['starts_at'], config('app.timezone'))->utc()->toIso8601String();
+
         return new CreateAppointmentDTO(
             clientId: $clientId,
-            startsAt: $validated['starts_at'],
+            startsAt: $startsAt,
             salonServiceIds: array_map('intval', $validated['salon_service_ids']),
             notes: $validated['notes'] ?? null,
             assignedUserId: isset($validated['assigned_user_id']) ? (int) $validated['assigned_user_id'] : null,

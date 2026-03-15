@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Header } from '@/components/Header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, Clock, Users, Scissors, Info, AlertCircle, Phone } from 'lucide-react'
+import { getToken, getUser } from '@/lib/api'
 
 const services = [
   { name: 'Blow dry', duration: '30 min', price: 'R$ 25,00' },
@@ -19,6 +20,12 @@ const rules = [
 ]
 
 export function HomePage() {
+  const isLoggedIn = !!getToken()
+  const user = getUser()
+  if (isLoggedIn && user?.role === 'professional') {
+    return <Navigate to="/calendario" replace />
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
