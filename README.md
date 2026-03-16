@@ -2,6 +2,9 @@
 
 Monorepo com **backend Laravel** (API) e **frontend React** (Vite + shadcn + Tailwind).
 
+**Vídeo de demonstração:** [https://youtu.be/62SiVqkZ-C8](https://youtu.be/62SiVqkZ-C8)  
+Na pasta **`projeto/`** estão o link do vídeo e os **prints** do sistema (ver `projeto/README.md`).
+
 ---
 
 ## Como rodar na sua máquina
