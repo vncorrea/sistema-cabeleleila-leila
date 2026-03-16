@@ -189,7 +189,7 @@ export function ClientAreaPage() {
                               <span>{servicesLabel(appointment)}</span>
                             </div>
                           </div>
-                          {(appointment.status === 'pending' || appointment.status === 'confirmed') && (
+                          {(appointment.status === 'pending' || appointment.status === 'confirmed') && canEditByRule && (
                             <Button
                               variant="outline"
                               size="sm"

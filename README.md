@@ -14,101 +14,70 @@ Monorepo com **backend Laravel** (API) e **frontend React** (Vite + shadcn + Tai
 
 ### 1. Backend (Laravel)
 
-Abra um terminal na pasta do projeto:
-
 ```bash
 cd backend
-```
-
-Copie o ambiente e gere a chave da aplicação:
-
-```bash
 cp .env.example .env
 php artisan key:generate
-```
-
-O `.env` já vem configurado para SQLite. Se quiser usar MySQL/PostgreSQL, edite as variáveis `DB_*` no `.env`.
-
-Rode as migrations e os seeders (cria as tabelas e insere os serviços do salão):
-
-```bash
 php artisan migrate
 php artisan db:seed
-```
-
-Suba o servidor da API:
-
-```bash
 php artisan serve
 ```
 
-A API fica em **http://localhost:8000**.  
-Os endpoints da aplicação estão em **http://localhost:8000/api/v1/** (ex.: `GET /api/v1/salon-services`, `POST /api/v1/appointments`).
+A API fica em **http://localhost:8000**. Endpoints em **http://localhost:8000/api/v1/**.
 
-**Autenticação:** a API usa **Laravel Sanctum** com Bearer token. Rotas públicas: `POST /auth/login`, `GET /salon-services`, `POST /appointments` (permite agendar sem login com nome/e-mail do cliente). As demais rotas exigem o header `Authorization: Bearer <token>`.
+**Autenticação:** Laravel Sanctum (Bearer token). Rotas públicas: `POST /auth/login`, `GET /salon-services`, `GET /clients/lookup`, `POST /appointments` (com optional_sanctum: aceita agendar com ou sem token; se logado como recepcionista/admin, pode enviar `assigned_user_id`). Demais rotas exigem `Authorization: Bearer <token>`.
 
-**Contas do seed (após `php artisan db:seed`):**
+**Contas do seed:**
 
 | Papel           | E-mail                  | Senha    | Acesso |
 |-----------------|-------------------------|----------|--------|
-| Leila (admin)   | leila@cabeleleila.com   | leila123 | Tudo   |
-| Cabelereira     | carla@cabeleleila.com   | carla123 | Só agendamentos atribuídos a ela |
-| Recepcionista   | maria@cabeleleila.com   | maria123 | Agenda e pode agendar |
+| Leila (admin)   | leila@cabeleleila.com   | leila123 | Tudo (inclui CRUD de usuários) |
+| Cabelereira     | carla@cabeleleila.com   | carla123 | Início e Calendário (só agendamentos dela) |
+| Recepcionista   | maria@cabeleleila.com   | maria123 | Agenda, Histórico, Equipe (sem Usuários) |
 
-Deixe esse terminal aberto enquanto usa o sistema.
+**Testes (backend):**
+
+```bash
+cd backend
+php artisan test
+```
 
 ---
 
 ### 2. Frontend (React)
 
-Abra **outro** terminal na pasta do projeto:
+Em **outro** terminal:
 
 ```bash
 cd frontend
-```
-
-Instale as dependências:
-
-```bash
 npm install
-```
-
-Instale os componentes de UI do shadcn usados pelo projeto (textarea, collapsible, checkbox, tabs, avatar). Se perguntar se quer sobrescrever arquivo existente, responda `y`:
-
-```bash
 npx shadcn@latest add textarea collapsible checkbox tabs avatar
 ```
 
-(Opcional) Crie um arquivo `.env` na pasta `frontend` para o frontend saber onde está a API:
+(Opcional) Crie `frontend/.env`:
 
 ```env
 VITE_API_URL=http://localhost:8000/api/v1
 ```
 
-Se não criar o `.env`, o frontend usa essa mesma URL por padrão.
-
-Inicie o servidor de desenvolvimento:
+Inicie o dev server:
 
 ```bash
 npm run dev
 ```
 
-O Vite deve mostrar algo como:
-
-```
-  ➜  Local:   http://localhost:5173/
-```
-
-Acesse **http://localhost:5173** no navegador. Você deve ver a tela inicial do Cabeleleila Leila.
+Acesse **http://localhost:5173**.
 
 ---
 
-### 3. Testando o fluxo
+### 3. Fluxo rápido
 
-1. **Início** – Página inicial com links.
-2. **Agendar** – Abra “Cadastrar novo cliente”, preencha nome e e-mail, cadastre. Depois selecione o cliente, data/hora e um ou mais serviços e clique em “Agendar”.
-3. **Histórico** – Escolha o cliente e um período (data início e fim) e clique em “Buscar”. Se já existir agendamento na semana, aparece a sugestão de agendar outros serviços no mesmo dia.
-4. **Equipe** – Lista de agendamentos; é possível “Confirmar” e “Cancelar” (com confirmação).
+1. **Início** – Links; “Continuar sem login” leva à Área do cliente (acesso por e-mail).
+2. **Agendar** – Com login: selecione cliente, cabelereira, data/hora e serviços. O select de horário mostra só horários livres da cabelereira escolhida (trava de agendamento). Sem login: preencha nome/e-mail/telefone e agende (se o e-mail já existir, o sistema usa o cliente cadastrado).
+3. **Histórico** – Filtros opcionais (cliente, data início/fim). Ao abrir a página, carrega os últimos 30 dias. Sugestão de data quando o cliente já tem agendamento na semana.
+4. **Equipe** – Lista de agendamentos; filtro por cabelereira; confirmar, cancelar, trocar cabelereira, reagendar (sem regra dos 2 dias).
+5. **Área do cliente** – Acesso por e-mail; lista agendamentos; reagendar (respeitando 2 dias antes) e link para novo agendamento.
+6. **Usuários** (só admin) – CRUD de cabelereiras e recepcionistas.
 
 ---
 
@@ -117,7 +86,8 @@ Acesse **http://localhost:5173** no navegador. Você deve ver a tela inicial do 
 | Onde      | Comandos |
 |----------|----------|
 | Backend  | `cd backend` → `cp .env.example .env` → `php artisan key:generate` → `php artisan migrate` → `php artisan db:seed` → `php artisan serve` |
-| Frontend | `cd frontend` → `npm install` → (opcional) criar `frontend/.env` com `VITE_API_URL=http://localhost:8000/api/v1` → `npm run dev` |
+| Frontend | `cd frontend` → `npm install` → (opcional) `frontend/.env` com `VITE_API_URL=http://localhost:8000/api/v1` → `npm run dev` |
+| Testes   | `cd backend` → `php artisan test` |
 
 Backend: http://localhost:8000  
 Frontend: http://localhost:5173  
@@ -126,15 +96,23 @@ Frontend: http://localhost:5173
 
 ## Estrutura do projeto
 
-- **`backend/`** – Laravel 12, API REST. Camadas: Controller → Form Request → DTO → Service → **Repository** (acesso ao banco).
-- **`frontend/`** – React 19, Vite, shadcn/ui, Tailwind CSS.
+- **`backend/`** – Laravel 12, API REST. Camadas: Controller → Form Request → DTO → Service → Repository. Fuso: America/Sao_Paulo (GMT-3). Mensagens de exceção em português.
+- **`frontend/`** – React 19, Vite, shadcn/ui (Base UI), Tailwind CSS. Exibição de datas/horas no fuso do salão (America/Sao_Paulo).
+
+---
 
 ## Escopo
 
-- **Cliente:** agendar um ou mais serviços; alterar/cancelar até 2 dias antes; histórico por período; sugestão de agendar outros serviços no mesmo dia quando já existe agendamento na semana.
-- **Equipe:** listar agendamentos, confirmar, alterar (incluindo com menos de 2 dias), gerenciar status dos itens do agendamento.
+- **Cliente (sem login):** agendar com nome/e-mail/telefone; área do cliente por e-mail; reagendar/cancelar até 2 dias antes; histórico por período; sugestão de agendar no mesmo dia quando já tem agendamento na semana.
+- **Recepcionista/Admin:** agendar com cliente e cabelereira; horários disponíveis por cabelereira (trava); histórico com filtros opcionais; equipe com filtro por cabelereira, troca de cabelereira e reagendar sem limite de 2 dias.
+- **Cabelereira:** só vê Início e Calendário (agendamentos atribuídos a ela).
+- **Admin:** além do acima, CRUD de usuários (cabelereira/recepcionista).
+
+---
 
 ## Regras de negócio
 
-- Alteração/cancelamento pelo **cliente** só até **2 dias antes** do agendamento; com menos de 2 dias, a alteração é feita pela **equipe** (`by_staff`).
-- **Sugestão:** se o cliente já tem agendamento na mesma semana, o sistema sugere a data desse agendamento para agendar outros serviços no mesmo dia.
+- **Regra dos 2 dias:** alteração/cancelamento pelo **cliente** só até 2 dias antes do agendamento; com menos de 2 dias, apenas a **equipe** pode alterar/cancelar (`by_staff`).
+- **Trava de agendamento:** ao escolher data e cabelereira, o sistema exibe apenas horários em que a cabelereira está livre; o backend valida conflito ao criar.
+- **Sugestão:** se o cliente já tem agendamento na mesma semana, o histórico sugere essa data para agendar outros serviços no mesmo dia.
+- **Cliente por e-mail:** em agendamento sem login, se o e-mail já existir, o sistema usa o cliente cadastrado (evita duplicata). Endpoint `GET /clients/lookup?email=` para pré-preencher dados no frontend.
